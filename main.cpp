@@ -5,6 +5,7 @@
 #include <algorithm>
 
 #include "common.h"
+#include "timer.h"
 #include "vec.h"
 #include "random.h"
 #include "microfacet.h"
@@ -128,8 +129,7 @@ Vec radiance(const Ray &r) {
             Vec woLocal = wmLocal * 2.0 * wmLocal.dot(wiLocal) - wiLocal;
             Vec wo = u * woLocal.x + v * woLocal.y + w * woLocal.z;
 
-            double weight = microfacet->G(woLocal, wiLocal) * std::abs((wi.dot(wm) / (wi.dot(n) * (wm).dot(n))));
-            beta = f * beta * weight;
+            beta = f * beta * microfacet->weight(woLocal, wiLocal, wmLocal);
             ray = Ray(x, wo);
         } else if (obj.refl == DIELECTRIC) {
             // Ideal dielectirc
@@ -221,8 +221,7 @@ Vec radiance(const Ray &r) {
             }
 
             Vec wo = u * woLocal.x + v * woLocal.y + w * woLocal.z;
-            double weight = microfacet->G(woLocal, wiLocal) * std::abs((wi.dot(wm) / (wi.dot(n) * (wm).dot(n))));
-            beta = f * beta * weight;
+            beta = f * beta * microfacet->weight(woLocal, wiLocal, wmLocal);
             ray = Ray(x, wo);
         }
     }
@@ -260,6 +259,9 @@ int main(int argc, char *argv[]) {
     Vec r;
     auto c = std::make_unique<Vec[]>(w * h);
 
+    Timer timer;
+    timer.start();
+
     #pragma omp parallel for schedule(dynamic, 1) private(r) num_threads(7)
     for (int y = 0; y < h; y++) {
         fprintf(stderr, "\rRendering (%d spp) %6.2f %%", samples * 4, 100.*y / (h - 1));
@@ -278,6 +280,8 @@ int main(int argc, char *argv[]) {
             }
         }
     }
+
+    printf("Time: %f sec\n", timer.stop());
 
     // Save image with std_image_write
     auto bytes = std::make_unique<uint8_t[]>(w * h * 3);

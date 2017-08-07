@@ -140,6 +140,16 @@ public:
         return G1(wo) * G1(wi);
     }
 
+    // Weighting function
+    double weight(const Vec &wo, const Vec &wi, const Vec &wm) const {
+        if (!sampleVisible_) {
+            return std::abs(wi.dot(wm)) * G(wo, wi) /
+                   std::max(1.0e-8, std::abs(cosTheta(wi) * cosTheta(wm)));
+        } else {
+            return G1(wo);
+        }
+    }
+
     // Private parameters
     double alphax_, alphay_;
     bool sampleVisible_;
@@ -272,7 +282,7 @@ public:
 
         // Initialize lower and higher bounds for bisection method
         double lower = -1.0;
-        double higher = erfCotThetaI;
+        double higher = 1.0;
 
         // Normalization factor for the CDF
         // This is equivarent to (G1 / 2)^{-1}
@@ -328,6 +338,7 @@ public:
                 tan2Theta = alpha * alpha * U1 / (1.0 - U1);
                 phi = 2.0 * Pi * U2;                
             } else {
+                // Anisotropic case
                 phi = std::atan(alphay_ / alphax_ * std::tan(2.0 * Pi * U2 + 0.5 * Pi));
                 if (U2 > 0.5) {
                     phi += Pi;
