@@ -8,6 +8,7 @@
 #include "timer.h"
 #include "vec.h"
 #include "random.h"
+#include "argparse.h"
 #include "microfacet.h"
 
 #define STB_IMAGE_WRITE_IMPLEMENTATION
@@ -129,7 +130,7 @@ Vec radiance(const Ray &r) {
             Vec woLocal = wmLocal * 2.0 * wmLocal.dot(wiLocal) - wiLocal;
             Vec wo = u * woLocal.x + v * woLocal.y + w * woLocal.z;
 
-            // Check reflection is truly reflection
+            // Check validity of reflection
             if (wiLocal.z * woLocal.z < 0.0) {
                 break;
             }
@@ -227,7 +228,9 @@ Vec radiance(const Ray &r) {
                 }
             }
 
-            if ((wiLocal.z * woLocal.z < 0.0 && isRefl) || (wiLocal.z * woLocal.z > 0.0 && !isRefl)) {
+            // Check validity of reflection / transmission
+            if ((wiLocal.z * woLocal.z < 0.0 && isRefl) ||
+                (wiLocal.z * woLocal.z > 0.0 && !isRefl)) {
                 break;
             }
 
@@ -240,25 +243,41 @@ Vec radiance(const Ray &r) {
     return L;
 }
 
-int main(int argc, char *argv[]) {
-    printf("usage: microfacet [samples] [distribution] [sample vis] [output file] [alphax] [alphay]\n");
-    printf("    distribution = {\"beckmann\", \"ggx\"}\n");
-    printf("      sample vis = {\"true\", \"false\"}\n\n");
+int main(int argc, char **argv) {
+    auto &parser = ArgumentParser::getInstance();
+    try {
+        parser.addArgument("-w", "--width", 960, false, "Image width");
+        parser.addArgument("-h", "--height", 720, false, "Image height");
+        parser.addArgument("-s", "--samples", 32, false, "Samples per pixel");
+        parser.addArgument("", "--distrib", "beckmann", false,
+                           "Name of distribution (ggx or beckmann)");
+        parser.addArgument("", "--samplevis", "yes", false, "Sample visible normals or not");
+        parser.addArgument("-o", "--output", "image.png", false, "Output file name");
+        parser.addArgument("", "--alphax", 0.1, false, "Roughness for x-direction");
+        parser.addArgument("", "--alphay", 0.1, false, "Roughness for y-direction");
+        parser.parse(argc, argv);
+    } catch (std::runtime_error &e) {
+        std::cerr << parser.helpText() << std::endl;
+        std::cerr << e.what() << std::endl;
+        return -1;
+    }
 
-    const int w = 960;
-    const int h = 720;
+    std::cerr << parser.helpText() << std::endl;
+    parser.print();
 
-    const int         samples      = argc >= 2 ? std::max(1, std::atoi(argv[1]) / 4) : 32;
-    const std::string distribution = argc >= 3 ? argv[2] : "beckmann";
-    const bool        sampleVis    = argc >= 4 ? (std::strcmp(argv[3], "true") == 0 ? true : false) : true;
-    const std::string outfile      = argc >= 5 ? argv[4] : "image.png";
-    const double      alphax       = argc >= 6 ? std::atof(argv[5]) : 0.1;
-    const double      alphay       = argc >= 7 ? std::atof(argv[6]) : 0.1;
+    const int w = parser.getInt("width");
+    const int h = parser.getInt("height");
+    const int samples = parser.getInt("samples");
+    const std::string distribution = parser.getString("distrib");
+    const bool sampleVis = parser.getBool("samplevis");
+    const std::string outfile = parser.getString("output");
+    const double alphax = parser.getDouble("alphax");
+    const double alphay = parser.getDouble("alphay");
 
     if (distribution == "beckmann") {
-        microfacet = std::make_unique<BeckmannDistribution>(alphax, alphay, sampleVis);
+        microfacet.reset(new BeckmannDistribution(alphax, alphay, sampleVis));
     } else if (distribution == "ggx") {
-        microfacet = std::make_unique<GGXDistribution>(alphax, alphay, sampleVis);
+        microfacet.reset(new GGXDistribution(alphax, alphay, sampleVis));
     } else {
         fprintf(stderr, "Unknown distribution type: %s\n", distribution.c_str());
         return -1;
@@ -268,7 +287,7 @@ int main(int argc, char *argv[]) {
     Vec cx = Vec(w * 0.5135 / h, 0.0, 0.0);
     Vec cy = cx.cross(cam.d).normalize() * 0.5135;
     Vec r;
-    auto c = std::make_unique<Vec[]>(w * h);
+    auto c = std::unique_ptr<Vec[]>(new Vec[w * h]);
 
     Timer timer;
     timer.start();
@@ -295,7 +314,7 @@ int main(int argc, char *argv[]) {
     printf("Time: %f sec\n", timer.stop());
 
     // Save image with std_image_write
-    auto bytes = std::make_unique<uint8_t[]>(w * h * 3);
+    auto bytes = std::unique_ptr<uint8_t[]>(new uint8_t[w * h * 3]);
     for (int i = 0; i < w * h; i++) {
         bytes[i * 3 + 0] = toInt(c[i].x);
         bytes[i * 3 + 1] = toInt(c[i].y);
