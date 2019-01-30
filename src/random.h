@@ -19,6 +19,6 @@ private:
     std::uniform_real_distribution<double> dist{0.0, 1.0};
 };
 
-static thread_local Random random;
+static thread_local Random mt;
 
 #endif  // _RANDOM_H_

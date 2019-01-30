@@ -91,7 +91,7 @@ Vec radiance(const Ray &r) {
         // Russian roulette
         double p = std::max(f.x, std::max(f.y, f.z));
         if (++depth > 5) {
-            if (random.next() < p) {
+            if (mt.next() < p) {
                 f = f * (1 / p);
             } else {
                 break;
@@ -102,8 +102,8 @@ Vec radiance(const Ray &r) {
         const Vec wi = -ray.d;
         if (obj.refl == DIFFUSE) {
             // Diffuse reflection
-            double r1 = 2 * Pi * random.next();
-            double r2 = random.next();
+            double r1 = 2 * Pi * mt.next();
+            double r2 = mt.next();
             double r2s = sqrt(r2);
             Vec w = nl;
             Vec u = std::abs(w.x) > 0.1 ? Vec(0.0, 1.0, 0.0) : Vec(1.0, 0.0, 0.0).cross(w).normalize();
@@ -128,6 +128,11 @@ Vec radiance(const Ray &r) {
             Vec wm = u * wmLocal.x + v * wmLocal.y + w * wmLocal.z;
             Vec woLocal = wmLocal * 2.0 * wmLocal.dot(wiLocal) - wiLocal;
             Vec wo = u * woLocal.x + v * woLocal.y + w * woLocal.z;
+
+            // Check reflection is truly reflection
+            if (wiLocal.z * woLocal.z < 0.0) {
+                break;
+            }
 
             beta = f * beta * microfacet->weight(woLocal, wiLocal, wmLocal);
             ray = Ray(x, wo);
@@ -160,7 +165,7 @@ Vec radiance(const Ray &r) {
             double P = 0.25 + 0.5 * Re;
             double RP = Re / P;
             double TP = Tr / (1.0 - P);
-            if (random.next() < P) {
+            if (mt.next() < P) {
                 beta = f * beta;
                 ray = reflRay;
                 pdf /= RP;
@@ -190,7 +195,7 @@ Vec radiance(const Ray &r) {
             double nnt = into ? nc / nt : nt / nc;
             double ddn = -std::abs(wi.dot(wm));
             double cos2t = 1.0 - nnt * nnt * (1.0 - ddn * ddn);
-            
+
             Vec woLocalTr = (-wiLocal * nnt - wmLocal * ((into ? 1 : -1) * (ddn * nnt + sqrt(cos2t)))).normalize();
             double a = nt - nc;
             double b = nt + nc;
@@ -201,23 +206,29 @@ Vec radiance(const Ray &r) {
             double P = 0.25 + 0.5 * Re;
             double RP = Re / P;
             double TP = Tr / (1.0 - P);
-            
+
             Vec woLocal;
-            bool total = false;
+            bool isRefl = false;
             if (cos2t < 0.0) {
                 // Total reflection
                 woLocal = woLocalRe;
-                total = true;
-            } else {           
-                if (random.next() < P) {
+                isRefl = true;
+            } else {
+                if (mt.next() < P) {
                     // Reflection
                     woLocal = woLocalRe;
                     pdf /= RP;
+                    isRefl = true;
                 } else {
                     // Transmission
                     woLocal = woLocalTr;
                     pdf /= TP;
+                    isRefl = false;
                 }
+            }
+
+            if ((wiLocal.z * woLocal.z < 0.0 && isRefl) || (wiLocal.z * woLocal.z > 0.0 && !isRefl)) {
+                break;
             }
 
             Vec wo = u * woLocal.x + v * woLocal.y + w * woLocal.z;
@@ -238,11 +249,11 @@ int main(int argc, char *argv[]) {
     const int h = 720;
 
     const int         samples      = argc >= 2 ? std::max(1, std::atoi(argv[1]) / 4) : 32;
-    const std::string distribution = argc >= 3 ? argv[2] : "beckmann"; 
+    const std::string distribution = argc >= 3 ? argv[2] : "beckmann";
     const bool        sampleVis    = argc >= 4 ? (std::strcmp(argv[3], "true") == 0 ? true : false) : true;
     const std::string outfile      = argc >= 5 ? argv[4] : "image.png";
-    const double      alphax       = argc >= 6 ? std::atof(argv[5]) : 0.1; 
-    const double      alphay       = argc >= 7 ? std::atof(argv[6]) : 0.1; 
+    const double      alphax       = argc >= 6 ? std::atof(argv[5]) : 0.1;
+    const double      alphay       = argc >= 7 ? std::atof(argv[6]) : 0.1;
 
     if (distribution == "beckmann") {
         microfacet = std::make_unique<BeckmannDistribution>(alphax, alphay, sampleVis);
@@ -269,8 +280,8 @@ int main(int argc, char *argv[]) {
             for (int sy = 0, i = (h - y - 1)*w + x; sy < 2; sy++) {
                 for (int sx = 0; sx < 2; sx++, r = Vec(0.0)) {
                     for (int s = 0; s < samples; s++) {
-                        double r1 = 2 * random.next(), dx = r1 < 1 ? sqrt(r1) - 1 : 1 - sqrt(2 - r1);
-                        double r2 = 2 * random.next(), dy = r2 < 1 ? sqrt(r2) - 1 : 1 - sqrt(2 - r2);
+                        double r1 = 2 * mt.next(), dx = r1 < 1 ? sqrt(r1) - 1 : 1 - sqrt(2 - r1);
+                        double r2 = 2 * mt.next(), dy = r2 < 1 ? sqrt(r2) - 1 : 1 - sqrt(2 - r2);
                         Vec d = cx*(((sx + .5 + dx) / 2 + x) / w - .5) +
                             cy*(((sy + .5 + dy) / 2 + y) / h - .5) + cam.d;
                         r = r + radiance(Ray(cam.o + d * 140, d.normalize())) * (1. / samples);

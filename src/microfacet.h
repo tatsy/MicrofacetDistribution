@@ -51,7 +51,7 @@ static inline double sin2Phi(const Vec &w) {
 }
 
 // Rational approximation of inverse error function
-// This method is borrowed from PBRT v3 
+// This method is borrowed from PBRT v3
 static inline double erfinv(double x) {
     double w, p;
     x = clamp(x, -0.99999f, 0.99999f);
@@ -165,8 +165,8 @@ public:
     }
 
     Vec sampleWm(const Vec &wo) const override {
-        const double U1 = random.next();
-        const double U2 = random.next();
+        const double U1 = mt.next();
+        const double U2 = mt.next();
 
         if (!sampleVisible_) {
             // Sample half-vector without taking normal visibility into consideration
@@ -181,7 +181,7 @@ public:
                 phi = 2.0 * Pi * U2;
             } else {
                 // Anisotropic case
-                // Following sampling strategy is analytically derived from 
+                // Following sampling strategy is analytically derived from
                 // P.15 of [Heitz et al. 2014]
                 // "Understanding the Masking-Shadowing Function in Microfacet-Based BRDFs"
                 double logSample = std::log(1.0 - U1);
@@ -225,7 +225,7 @@ public:
 
         double cosThetaO = cosTheta(wo);
         double sinThetaO = sinTheta(wo);
-        double absTanThetaO = std::abs(tanTheta(wo)); 
+        double absTanThetaO = std::abs(tanTheta(wo));
         if (std::isinf(absTanThetaO)) return 0.;
 
         double alpha = std::sqrt(cosThetaO * cosThetaO * alphax_ * alphax_ +
@@ -253,15 +253,15 @@ public:
         slopey = alphay * slopey;
 
         // 5. compute normal
-        return Vec(-slopex, -slopey, 1.0).normalize();    
+        return Vec(-slopex, -slopey, 1.0).normalize();
     }
 
     // Sample slope distribution with alphax and alphay equal to one
     static void sampleBeckman_P22_11(double cosThetaI, double *slopex, double *slopey) {
         using ::erf;
 
-        const double U1 = random.next();
-        const double U2 = random.next();
+        const double U1 = mt.next();
+        const double U2 = mt.next();
 
         // The special case where the ray comes from normal direction
         // The following sampling is equivarent to the sampling of
@@ -327,8 +327,8 @@ public:
     }
 
     Vec sampleWm(const Vec &wo) const override {
-        const double U1 = random.next();
-        const double U2 = random.next();
+        const double U1 = mt.next();
+        const double U2 = mt.next();
 
         if (!sampleVisible_) {
             double tan2Theta, phi;
@@ -336,7 +336,7 @@ public:
                 // Isotropic case
                 double alpha = alphax_;
                 tan2Theta = alpha * alpha * U1 / (1.0 - U1);
-                phi = 2.0 * Pi * U2;                
+                phi = 2.0 * Pi * U2;
             } else {
                 // Anisotropic case
                 phi = std::atan(alphay_ / alphax_ * std::tan(2.0 * Pi * U2 + 0.5 * Pi));
@@ -371,7 +371,7 @@ public:
                 wm = -wm;
             }
 
-            return wm;            
+            return wm;
         }
     }
 
@@ -393,12 +393,12 @@ public:
         slopey = alphay * slopey;
 
         // 5. compute normal
-        return Vec(-slopex, -slopey, 1.0).normalize();       
+        return Vec(-slopex, -slopey, 1.0).normalize();
     }
 
     static void sampleGGX_P22_11(double cosThetaI, double *slopex, double *slopey) {
-        const double U1 = random.next();
-        double U2 = random.next();
+        const double U1 = mt.next();
+        double U2 = mt.next();
 
         // The special case where the ray comes from normal direction
         // The following sampling is equivarent to the sampling of
@@ -443,9 +443,9 @@ public:
     }
 
     double lambda(const Vec &wo) const override {
-        double absTanThetaO = std::abs(tanTheta(wo)); 
+        double absTanThetaO = std::abs(tanTheta(wo));
         if (std::isinf(absTanThetaO)) return 0.;
-        
+
         double alpha =
             std::sqrt(cos2Phi(wo) * alphax_ * alphax_ + sin2Phi(wo) * alphay_ * alphay_);
         double alpha2Tan2Theta = (alpha * absTanThetaO) * (alpha * absTanThetaO);
