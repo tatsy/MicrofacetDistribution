@@ -90,5 +90,5 @@ In this program, I denote a ray direction towards lights as `wo` and that from a
 
 ## References
 
-* Walter et al. 2007, "Microfacet Models for Refraction through Rough Surfaces", Eurographics Symposium on Rendering, 2007.
-* Heitz et al. 2014, "Importance Sampling Microfacet-Based BSDFs with the Distribution of Visible Normals", Eurographics Symposium on Rendering
+* Walter et al., "Microfacet Models for Refraction through Rough Surfaces", Eurographics Symposium on Rendering, 2007.
+* Heitz et al., "Importance Sampling Microfacet-Based BSDFs with the Distribution of Visible Normals", Eurographics Symposium on Rendering, 2014.
