@@ -173,7 +173,7 @@ public:
             double tan2Theta, phi;
             if (alphax_ == alphay_) {
                 // Isotropic case
-                // Following smapling formula can be found in [Walter et al. 2007]
+                // Following sampling formula can be found in [Walter et al. 2007]
                 // "Microfacet Models for Refraction through Rough Surfaces"
                 double alpha = alphax_;
                 double logSample = std::log(1.0 - U1);

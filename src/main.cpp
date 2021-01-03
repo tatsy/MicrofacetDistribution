@@ -91,7 +91,7 @@ Vec radiance(const Ray &r) {
 
         // Russian roulette
         double p = std::max(f.x, std::max(f.y, f.z));
-        if (++depth > 5) {
+        if (++depth > 4) {
             if (mt.next() < p) {
                 f = f * (1 / p);
             } else {
@@ -131,7 +131,7 @@ Vec radiance(const Ray &r) {
             Vec wo = u * woLocal.x + v * woLocal.y + w * woLocal.z;
 
             // Check validity of reflection
-            if (wiLocal.z * woLocal.z < 0.0) {
+            if (wiLocal.z * woLocal.z < 1.0e-8) {
                 break;
             }
 
@@ -229,8 +229,8 @@ Vec radiance(const Ray &r) {
             }
 
             // Check validity of reflection / transmission
-            if ((wiLocal.z * woLocal.z < 0.0 && isRefl) ||
-                (wiLocal.z * woLocal.z > 0.0 && !isRefl)) {
+            if ((wiLocal.z * woLocal.z < 1.0e-8 && isRefl) ||
+                (wiLocal.z * woLocal.z > -1.0e-8 && !isRefl)) {
                 break;
             }
 
